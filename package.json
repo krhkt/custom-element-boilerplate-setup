@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Replaces the custom element strings throughout the github/custom-element-boilerplate template project",
   "main": "src/main.js",
-  "bin": "src/main.js",
+  "bin": {
+    "custom-element-boilerplate-setup": "src/main.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

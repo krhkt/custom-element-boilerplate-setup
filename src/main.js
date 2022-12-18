@@ -44,7 +44,7 @@ const substitutionEnum = Object.freeze({
     filename: 'filename',
     contents: 'contents',
 });
-const filesToUpate = {
+const filesToUpdate = {
     'custom-elements.json': [substitutionEnum.filename, substitutionEnum.contents],
     'custom-elements-manifest.config.js': [substitutionEnum.filename],
     'examples/index.html': [substitutionEnum.contents],
@@ -199,7 +199,7 @@ const replaceFileContents = async (fileFullPath, replacementMap) => {
     const replacementMap = calculateReplacementMap(fromCustomElementKey, toCustomElementKeys);
     print('replacements: ', replacementMap);
 
-    for (const [key, value] of Object.entries(filesToUpate)) {
+    for (const [key, value] of Object.entries(filesToUpdate)) {
         console.log(`Updating ${key}...`);
 
         const targetFullPath = calculateTargetFileFullPath(key, replacementMap);
