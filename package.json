@@ -1,0 +1,25 @@
+{
+  "name": "@krhkt/custom-element-boilerplate-setup",
+  "version": "1.0.0",
+  "description": "Replaces the custom element strings throughout the github/custom-element-boilerplate template project",
+  "main": "src/main.js",
+  "bin": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krhkt/custom-element-boilerplate-setup.git"
+  },
+  "keywords": [
+    "custom-element",
+    "custom-element-boilerplate",
+    "development-setup"
+  ],
+  "author": "@krhkt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/krhkt/custom-element-boilerplate-setup/issues"
+  },
+  "homepage": "https://github.com/krhkt/custom-element-boilerplate-setup#readme"
+}
