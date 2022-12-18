@@ -7,8 +7,9 @@ const fs = require('fs');
 const { promises: fsp } = fs;
 
 /**
+ * file: replaces files' names
  * tag: replaces tags inside files
- * file: replaces files name:
+ * tagName: replaces tag name strings if they're used
  * className: replaces custom element class name inside files
  * suffix: replaces the className suffix inside files
  *         handled separately to allow it to be overwritten
@@ -60,15 +61,15 @@ const rl = readline.createInterface({
 const readlinePromise = (question) => new Promise(
     (resolve) => rl.question(question, answer => resolve(answer))
 );
-const isVerbose = () => process.argv.slice(-1)[0].trim() === '--verbose';
+const isVerbose = () => process.argv.slice(-1)[0] === '--verbose';
 const print = (...args) => isVerbose() && console.log(...args);
 //#endregion
 
 //#region [ text manipulation ]
 const ucFirst = (text) => !text ? text : `${text[0].toUpperCase()}${text.substring(1)}`;
 const lcFirst = (text) => !text ? text : `${text[0].toLowerCase()}${text.substring(1)}`;
-const escapeRegex = (text) => text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
-const trimSuffix = (text, suffix) => (text.endsWith(suffix)) ? text.slice(0, -suffix.length) : text;
+const escapeRegex = (text) => !text ? text : text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+const trimSuffix = (text, suffix) => !text ? text : ((text.endsWith(suffix)) ? text.slice(0, -suffix.length) : text);
 //#endregion
 
 const tryFetchGitRepositoryName = () => {
@@ -96,7 +97,7 @@ const tryFetchGitRepositoryName = () => {
 };
 
 const calculateCustomElementNameFromRepositoryName = (repositoryName) => 
-    repositoryName .split('-') .map(word => ucFirst(word)) .join('');
+    repositoryName.split('-').map(word => ucFirst(word)).join('');
 
 const calculateTargetCustomElementKeysByClassName = (targetClassName) => {
     targetClassName = targetClassName

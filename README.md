@@ -12,6 +12,6 @@ Once your repository is created and cloned, simply run:
 npx @krhkt/custom-element-boilerplate-setup
 ```
 
-And write the custom element class name to be used in pascal case sentence, without the `Element` suffix.
+And write the custom element class name to be used in pascal case sentence, without the `Element` suffix. Or leave it blank to use the default suggestion.
 
-
+Note: You can run passing the option `--verbose`, if you want to see more information about the each step.
