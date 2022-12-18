@@ -17,6 +17,7 @@ const { promises: fsp } = fs;
 const fromCustomElementKey = Object.freeze({
     file: 'custom-element',
     tag: 'custom-element',
+    tagName: 'CUSTOM-ELEMENT',
     className: 'CustomElement',
     suffix: 'Element',
 });
@@ -30,6 +31,7 @@ const replacementTemplateMap = new Map([
   ["{from:file}s", "{to:file}"],
   ["{from:file}", "{to:file}"],
   ["{from:tag}", "{to:tag}"],
+  ["{from:tagName}", "{to:tagName}"],
   ["{from:className}{from:suffix}", "{to:className}{to:suffix}"],
 ]);
 
@@ -50,7 +52,7 @@ const filesToUpate = {
     'test/test.ts': [substitutionEnum.contents],
 };
 
-//#region [ command line input ]
+//#region [ command line input / output ]
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -58,10 +60,16 @@ const rl = readline.createInterface({
 const readlinePromise = (question) => new Promise(
     (resolve) => rl.question(question, answer => resolve(answer))
 );
+const isVerbose = () => process.argv.slice(-1)[0].trim() === '--verbose';
+const print = (...args) => isVerbose() && console.log(...args);
 //#endregion
 
+//#region [ text manipulation ]
 const ucFirst = (text) => !text ? text : `${text[0].toUpperCase()}${text.substring(1)}`;
 const lcFirst = (text) => !text ? text : `${text[0].toLowerCase()}${text.substring(1)}`;
+const escapeRegex = (text) => text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+const trimSuffix = (text, suffix) => (text.endsWith(suffix)) ? text.slice(0, -suffix.length) : text;
+//#endregion
 
 const tryFetchGitRepositoryName = () => {
     const spawnOptions = { encoding: 'utf8' };
@@ -87,18 +95,12 @@ const tryFetchGitRepositoryName = () => {
     return byPath;
 };
 
-const calculateCustomElementNameFromRepositoryName = (repositoryName) => {
-    const className = repositoryName
-        .split('-')
-        .map(word => ucFirst(word))
-        .join('');
-    
-    return (className.endsWith(fromCustomElementKey.suffix)) 
-        ? className.slice(0, -customElementKeys.suffix.length)
-        : className;
-};
+const calculateCustomElementNameFromRepositoryName = (repositoryName) => 
+    repositoryName .split('-') .map(word => ucFirst(word)) .join('');
 
 const calculateTargetCustomElementKeysByClassName = (targetClassName) => {
+    targetClassName = targetClassName
+
     const dashCase = lcFirst(targetClassName).replace(
         /[A-Z]{1}/g,
         (match) => `-${match[0].toLowerCase()}`
@@ -107,6 +109,7 @@ const calculateTargetCustomElementKeysByClassName = (targetClassName) => {
     return {
         file: dashCase,
         tag: dashCase,
+        tagName: dashCase.toUpperCase(),
         className: targetClassName,
         suffix: fromCustomElementKey.suffix,
     };
@@ -122,7 +125,8 @@ const setMapEntriesByPrefixedObjectKeys = (replacementMap, prefix, keyValue) => 
 
 const replaceStringByMapParts = (templateString, replacementMap) => {
     for (const [key, value] of replacementMap.entries()) {
-        templateString = templateString.replace(key, value);
+        const regexKey = new RegExp(escapeRegex(key), 'g');
+        templateString = templateString.replace(regexKey, value);
     }
 
     return templateString;
@@ -135,7 +139,7 @@ const calculateReplacementMap = (fromKeys, toKeys) => {
     setMapEntriesByPrefixedObjectKeys(prefixedKeyMap, 'from', fromKeys);
     setMapEntriesByPrefixedObjectKeys(prefixedKeyMap, 'to', toKeys);
 
-    console.log(prefixedKeyMap);
+    print('templates substitution: ', prefixedKeyMap);
 
     for (const [key, value] of replacementTemplateMap.entries()) {
         replacementMap.set(
@@ -183,14 +187,17 @@ const replaceFileContents = async (fileFullPath, replacementMap) => {
     const repositoryName = tryFetchGitRepositoryName();
     const customElementNameCandidate = calculateCustomElementNameFromRepositoryName(repositoryName);
     const promptAnswer =  await readlinePromise(`Custom element class name in PascalCase (${customElementNameCandidate}): `);
-    const answer = ucFirst(promptAnswer.trim()) || customElementNameCandidate;
+    const answer = trimSuffix(
+        ucFirst(promptAnswer.trim()) || customElementNameCandidate,
+        fromCustomElementKey.suffix
+    );
     rl.close();
 
     const toCustomElementKeys = calculateTargetCustomElementKeysByClassName(answer);
-    console.log(toCustomElementKeys);
+    print('target:', toCustomElementKeys);
     
     const replacementMap = calculateReplacementMap(fromCustomElementKey, toCustomElementKeys);
-    console.log(replacementMap);
+    print('replacements: ', replacementMap);
 
     for (const [key, value] of Object.entries(filesToUpate)) {
         console.log(`Updating ${key}...`);
