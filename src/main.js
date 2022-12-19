@@ -7,6 +7,23 @@ const fs = require('fs');
 const { promises: fsp } = fs;
 
 /**
+ * files that require update:
+ *      - filename: will try to update the file name
+ *      - contents: will try to update the content of the file
+ */
+const substitutionEnum = Object.freeze({
+    filename: 'filename',
+    contents: 'contents',
+});
+const filesToUpdate = {
+    'custom-elements.json': [substitutionEnum.filename, substitutionEnum.contents],
+    'custom-elements-manifest.config.js': [substitutionEnum.filename],
+    'examples/index.html': [substitutionEnum.contents],
+    'src/custom-element.ts': [substitutionEnum.filename, substitutionEnum.contents],
+    'test/test.ts': [substitutionEnum.contents],
+};
+
+/**
  * file: replaces files' names
  * tag: replaces tags inside files
  * tagName: replaces tag name strings if they're used
@@ -35,23 +52,6 @@ const replacementTemplateMap = new Map([
   ["{from:tagName}", "{to:tagName}"],
   ["{from:className}{from:suffix}", "{to:className}{to:suffix}"],
 ]);
-
-/**
- * files that require update:
- *      - filename: will try to update the file name
- *      - contents: will try to update the content of the file
- */
-const substitutionEnum = Object.freeze({
-    filename: 'filename',
-    contents: 'contents',
-});
-const filesToUpdate = {
-    'custom-elements.json': [substitutionEnum.filename, substitutionEnum.contents],
-    'custom-elements-manifest.config.js': [substitutionEnum.filename],
-    'examples/index.html': [substitutionEnum.contents],
-    'src/custom-element.ts': [substitutionEnum.filename, substitutionEnum.contents],
-    'test/test.ts': [substitutionEnum.contents],
-};
 
 //#region [ command line input / output ]
 const rl = readline.createInterface({
@@ -152,8 +152,9 @@ const calculateReplacementMap = (fromKeys, toKeys) => {
     return replacementMap;
 };
 
-const calculateTargetFileFullPath = (fromFilePath, replacementMap) => {
-    const fromFullPath = path.normalize(`${process.cwd()}${path.sep}${fromFilePath}`);
+const getFileFullPath = (relativePath) => path.normalize(`${process.cwd()}${path.sep}${relativePath}`);
+
+const calculateTargetFileFullPath = (fromFullPath, replacementMap) => {
     const directory = path.dirname(fromFullPath);
     const basename = path.basename(fromFullPath);
     const extension = path.extname(basename);
@@ -200,13 +201,16 @@ const replaceFileContents = async (fileFullPath, replacementMap) => {
     const replacementMap = calculateReplacementMap(fromCustomElementKey, toCustomElementKeys);
     print('replacements: ', replacementMap);
 
-    for (const [key, value] of Object.entries(filesToUpdate)) {
-        console.log(`Updating ${key}...`);
+    for (const [fileRelativePath, flags] of Object.entries(filesToUpdate)) {
+        console.log(`Updating ${fileRelativePath}...`);
 
-        const targetFullPath = calculateTargetFileFullPath(key, replacementMap);
+        const fromFileFullPath = getFileFullPath(fileRelativePath);
+        if (flags.includes(substitutionEnum.contents)) await replaceFileContents(fromFileFullPath, replacementMap);
 
-        if (value.includes(substitutionEnum.filename)) await replaceFileName(key, targetFullPath);
-        if (value.includes(substitutionEnum.contents)) await replaceFileContents(targetFullPath, replacementMap);
+        if (!flags.includes(substitutionEnum.filename)) continue;
+
+        const targetFullPath = calculateTargetFileFullPath(fromFileFullPath, replacementMap);
+        await replaceFileName(fromFileFullPath, targetFullPath);
     }
 
     console.log('\nAll done! Happy hacking.\n');
