@@ -1,6 +1,6 @@
 {
   "name": "@krhkt/custom-element-boilerplate-setup",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Replaces the custom element strings throughout the github/custom-element-boilerplate template project",
   "main": "src/main.js",
   "bin": {
