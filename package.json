@@ -7,6 +7,7 @@
     "custom-element-boilerplate-setup": "src/main.js"
   },
   "scripts": {
+    "main": "node src/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

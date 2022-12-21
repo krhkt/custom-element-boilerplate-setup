@@ -16,11 +16,13 @@ const substitutionEnum = Object.freeze({
     contents: 'contents',
 });
 const filesToUpdate = {
-    'custom-elements.json': [substitutionEnum.filename, substitutionEnum.contents],
-    'custom-elements-manifest.config.js': [substitutionEnum.filename],
+    'custom-elements.json': [substitutionEnum.contents],
     'examples/index.html': [substitutionEnum.contents],
     'src/custom-element.ts': [substitutionEnum.filename, substitutionEnum.contents],
     'test/test.ts': [substitutionEnum.contents],
+    'vscode.html-custom-data.json': [substitutionEnum.contents],
+    '.eslintrc.json': [substitutionEnum.contents],
+    'package.json': [substitutionEnum.contents],
 };
 
 /**
@@ -34,6 +36,7 @@ const filesToUpdate = {
  */
 const fromCustomElementKey = Object.freeze({
     file: 'custom-element',
+    fileSuffix: 'element',
     tag: 'custom-element',
     tagName: 'CUSTOM-ELEMENT',
     className: 'CustomElement',
@@ -45,13 +48,34 @@ const fromCustomElementKey = Object.freeze({
  *      - from prefix: will use the fromCustomElementKey object
  *      - to prefix:   will use the targetCustomElementKey object
  */
-const replacementTemplateMap = new Map([
-  ["{from:file}s", "{to:file}"],
-  ["{from:file}", "{to:file}"],
-  ["{from:tag}", "{to:tag}"],
-  ["{from:tagName}", "{to:tagName}"],
-  ["{from:className}{from:suffix}", "{to:className}{to:suffix}"],
-]);
+const replacementTemplateMap = {
+    filename: new Map([
+        ['{from:file}', '{to:file}-{to:fileSuffix}'],
+    ]),
+    contents: new Map([
+        // tags
+        ['<{from:tag}>', '<{to:tag}>'],
+        ['</{from:tag}>', '</{to:tag}>'],
+        // strings
+        ['"{from:tag}"', '"{to:tag}"'],
+        ['\'{from:tag}\'', '\'{to:tag}\''],
+        // index title
+        ['{from:tag} demo', '{to:tag} demo'],
+        // srcs
+        ['src/{from:tag}\'', 'src/{to:tag}-{to:fileSuffix}\''],
+        ['src/{from:tag}.ts', 'src/{to:tag}-{to:fileSuffix}.ts'],
+        //tag name (tests)
+        ['{from:tagName}', '{to:tagName}'],
+        // class name
+        ['{from:className}{from:suffix}', '{to:className}{to:suffix}'],
+        //package.json
+        ['"repository": "github/{from:tag}-boilerplate"', '"repository": "github/{to:tag}-{to:fileSuffix}"'],
+        ['"name": "@github/{from:tag}-{from:fileSuffix}"', '"name": "{to:tag}-{to:fileSuffix}"'],
+        ['"main": "dist/{from:tag}.js"', '"main": "dist/{to:tag}-{to:fileSuffix}.js"'],
+        ['"module": "dist/{from:tag}.js"', '"module": "dist/{to:tag}-{to:fileSuffix}.js"'],
+        ['"types": "dist/{from:tag}s.d.ts"', '"types": "dist/{to:tag}-{to:fileSuffix}.d.ts"'],
+    ]),
+};
 
 //#region [ command line input / output ]
 const rl = readline.createInterface({
@@ -68,7 +92,7 @@ const print = (...args) => isVerbose() && console.log(...args);
 //#region [ text manipulation ]
 const ucFirst = (text) => !text ? text : `${text[0].toUpperCase()}${text.substring(1)}`;
 const lcFirst = (text) => !text ? text : `${text[0].toLowerCase()}${text.substring(1)}`;
-const escapeRegex = (text) => !text ? text : text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+const escapeRegex = (text) => !text ? text : text.replace(/[/\-\\^$*+?.()|[\]{}<>]/g, '\\$&');
 const trimSuffix = (text, suffix) => !text ? text : ((text.endsWith(suffix)) ? text.slice(0, -suffix.length) : text);
 //#endregion
 
@@ -109,6 +133,7 @@ const calculateTargetCustomElementKeysByClassName = (targetClassName) => {
 
     return {
         file: dashCase,
+        fileSuffix: lcFirst(fromCustomElementKey.suffix),
         tag: dashCase,
         tagName: dashCase.toUpperCase(),
         className: targetClassName,
@@ -134,7 +159,10 @@ const replaceStringByMapParts = (templateString, replacementMap) => {
 }
 
 const calculateReplacementMap = (fromKeys, toKeys) => {
-    const replacementMap = new Map();
+    const replacementMap = {
+        filename: new Map(),
+        contents: new Map(),
+    };
 
     const prefixedKeyMap = new Map();
     setMapEntriesByPrefixedObjectKeys(prefixedKeyMap, 'from', fromKeys);
@@ -142,11 +170,13 @@ const calculateReplacementMap = (fromKeys, toKeys) => {
 
     print('templates substitution: ', prefixedKeyMap);
 
-    for (const [key, value] of replacementTemplateMap.entries()) {
-        replacementMap.set(
-            replaceStringByMapParts(key, prefixedKeyMap),
-            replaceStringByMapParts(value, prefixedKeyMap)
-        );
+    for (const [type, map] of Object.entries(replacementMap)) {
+        for (const [key, value] of replacementTemplateMap[type].entries()) {
+            map.set(
+                replaceStringByMapParts(key, prefixedKeyMap),
+                replaceStringByMapParts(value, prefixedKeyMap)
+            );
+        }
     }
 
     return replacementMap;
@@ -205,11 +235,11 @@ const replaceFileContents = async (fileFullPath, replacementMap) => {
         console.log(`Updating ${fileRelativePath}...`);
 
         const fromFileFullPath = getFileFullPath(fileRelativePath);
-        if (flags.includes(substitutionEnum.contents)) await replaceFileContents(fromFileFullPath, replacementMap);
+        if (flags.includes(substitutionEnum.contents)) await replaceFileContents(fromFileFullPath, replacementMap.contents);
 
         if (!flags.includes(substitutionEnum.filename)) continue;
 
-        const targetFullPath = calculateTargetFileFullPath(fromFileFullPath, replacementMap);
+        const targetFullPath = calculateTargetFileFullPath(fromFileFullPath, replacementMap.filename);
         await replaceFileName(fromFileFullPath, targetFullPath);
     }
 
