@@ -98,6 +98,7 @@ const trimSuffix = (text, suffix) => !text ? text : ((text.endsWith(suffix)) ? t
 
 const tryFetchGitRepositoryName = () => {
     const spawnOptions = { encoding: 'utf8' };
+    const gitSuffix = '.git';
 
     // try retrieving by remote:origin
     const { stdout: gitOriginRemote } = spawnSync(
@@ -106,7 +107,8 @@ const tryFetchGitRepositoryName = () => {
         spawnOptions
     );
     
-    const byOrigin = path.basename(gitOriginRemote.trim()).slice(0, -'.git'.length);
+    let byOrigin = path.basename(gitOriginRemote.trim());
+    if (byOrigin.endsWith(gitSuffix)) byOrigin = byOrigin.slice(0, -gitSuffix.length);
     if (byOrigin) return byOrigin;
 
     // try retrieving by foldername
